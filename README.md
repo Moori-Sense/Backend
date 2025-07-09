@@ -122,13 +122,13 @@ backend/
 
 ```bash
 # 저장소 클론
-git clone https://github.com/your-username/smart-mooring-system.git
-cd smart-mooring-system/backend
+git clone https://github.com/Moori-Sense/Backend.git
+cd backend
 
 # 가상환경 생성 및 활성화
-python -m venv mooring_env
-source mooring_env/bin/activate  # Linux/Mac
-# 또는 mooring_env\Scripts\activate  # Windows
+python -m venv backend_env
+source backend_env/bin/activate  # Linux/Mac
+# 또는 backend_env\Scripts\activate  # Windows
 
 # 의존성 설치
 pip install -r requirements.txt
@@ -167,11 +167,14 @@ alembic upgrade head
 ### **4. 서버 실행**
 
 ```bash
-# 개발 서버 실행
-uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+# src 디렉토리로 이동
+cd src
 
-# 또는 Python 직접 실행
-python src/main.py
+# 개발 서버 실행
+uvicorn main:app --reload
+
+# 또는 호스트와 포트 지정
+uvicorn main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### **5. API 문서 확인**
@@ -287,8 +290,6 @@ docker-compose up -d
 - **API 문서**: http://localhost:8000/docs
 
 
-
----
 
 **2025년 스마트 해운물류 ICT 멘토링 프로젝트**  
 *항만 안전을 위한 스마트 계류줄 관리 시스템*
