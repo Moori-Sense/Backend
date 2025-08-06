@@ -1,3 +1,5 @@
+SQLAlchemy==2.0.42
+typing_extensions==4.14.1
 annotated-types==0.7.0
 anyio==4.9.0
 appnope==0.1.4
