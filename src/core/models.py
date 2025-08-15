@@ -1,5 +1,6 @@
 # SQLAIchemy DB 모델(models.py)
-from sqlalchemy import Column, Integer, String, DateTime, Decimal, ForeignKey, Text, Float
+from sqlalchemy import Column, Integer, String, DateTime, ForeignKey, Text, Float
+from sqlalchemy.dialects.postgresql import NUMERIC
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -12,8 +13,8 @@ class Berth(Base):
 
     berth_id = Column(Integer, primary_key=True, index=True)
     berth_name = Column(String(50), nullable=False, comment="부두명")
-    max_ship_length = Column(Decimal(8,2), comment="최대 수용 선박 길이(m)")
-    max_ship_beam = Column(Decimal(8,2), comment="최대 수용 선박 폭(m)")
+    max_ship_length = Column(NUMERIC(8,2), comment="최대 수용 선박 길이(m)")
+    max_ship_beam = Column(NUMERIC(8,2), comment="최대 수용 선박 폭(m)")
     status = Column(String(20), default="AVAILABLE", comment="부두상태")
     created_at = Column(DateTime, default=func.now(), comment="생성일시")
 
@@ -28,7 +29,7 @@ class Ship(Base):
     ship_id = Column(Integer, primary_key=True, index=True)
     ship_name = Column(String(100), nullable=False, comment="선박명")
     ship_type = Column(String(50), comment="선박 종류")
-    length = Column(Decimal(8,2), comment="선박 길이(m)")
+    length = Column(NUMERIC(8,2), comment="선박 길이(m)")
     berth_id = Column(Integer, ForeignKey("berths.berth_id"), nullable=True)
     arrival_time = Column(DateTime, comment="접안 시간")
     departure_time = Column(DateTime, comment="출항 시간")
@@ -47,10 +48,10 @@ class MooringLine(Base):
     __tablename__ = "mooring_lines"
 
     line_id = Column(Integer, primary_key=True, index=True)
-    ship_id = Column(String(20), ForeignKey("ships.ship_id"), nullable=False)
+    ship_id = Column(Integer, ForeignKey("ships.ship_id"), nullable=False)
     line_position = Column(String(20), nullable=False, comment="계류줄 위치")
-    max_tension = Column(Decimal(8,2), nullable=False, comment="최대 허용 장력(N)")
-    length = Column(Decimal(8,2), comment="계류줄 길이(m)")
+    max_tension = Column(NUMERIC(8,2), nullable=False, comment="최대 허용 장력(N)")
+    length = Column(NUMERIC(8,2), comment="계류줄 길이(m)")
     status = Column(String(20), default="ACTIVE", comment="계류줄 상태")
     installed_at = Column(DateTime, default=func.now(), comment="설치 일시")
 
@@ -66,7 +67,7 @@ class SensorData(Base):
     line_position = Column(String(20), primary_key=True, comment="계류줄 위치")
     measured_at = Column(DateTime, primary_key=True, default=func.now(), comment="측정 시간")
 
-    tension_value = Column(Decimal(10, 3), nullable=False, comment="장력 측정값(kN)")
+    tension_value = Column(NUMERIC(10, 3), nullable=False, comment="장력 측정값(kN)")
 
     # 관계 설정
     ship = relationship("Ship", back_populates="sensor_data")
@@ -79,7 +80,7 @@ class Alert(Base):
     ship_id = Column(Integer, ForeignKey("ships.ship_id"), nullable=False)
     line_position = Column(String(20), nullable=False, comment="계류줄 위치")
     alert_type = Column(String(30), nullable=False, comment="경보 종류")
-    actual_value = Column(Decimal(10,3), comment="실제 측정값")
+    actual_value = Column(NUMERIC(10,3), comment="실제 측정값")
     status = Column(String(20), default="ACTIVE", comment="경보 상태")
     created_at = Column(DateTime, default=func.now(), comment="발생일시")
     resolved_at = Column(DateTime, comment="해결일시")
