@@ -1,5 +1,5 @@
 import React from 'react';
-import { WeatherData } from '../types';
+import type { WeatherData } from '../types';
 import { format } from 'date-fns';
 
 interface WeatherDisplayProps {

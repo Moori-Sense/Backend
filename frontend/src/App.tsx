@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { DashboardData } from './types';
+import { useState, useEffect } from 'react';
+import type { DashboardData } from './types';
 import { dashboardApi, simulationApi } from './api';
 import MooringLineCard from './components/MooringLineCard';
 import WeatherDisplay from './components/WeatherDisplay';

@@ -1,9 +1,8 @@
 import axios from 'axios';
-import { DashboardData, TensionChartData } from '../types';
+import type { DashboardData, TensionChartData } from '../types';
 
-const API_BASE_URL = window.location.hostname === 'localhost' 
-  ? 'http://localhost:8000/api'
-  : 'https://8000-ir0ri94bpy59cyqsm8eok-6532622b.e2b.dev/api';
+// Use relative URL for API calls when served from the same backend
+const API_BASE_URL = '/api';
 
 const api = axios.create({
   baseURL: API_BASE_URL,

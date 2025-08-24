@@ -1,5 +1,5 @@
 import React from 'react';
-import { MooringLine } from '../types';
+import type { MooringLine } from '../types';
 
 interface MooringLineCardProps {
   line: MooringLine;

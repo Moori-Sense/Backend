@@ -13,7 +13,7 @@ import {
   ComposedChart,
 } from 'recharts';
 import { format } from 'date-fns';
-import { TensionChartData } from '../types';
+import type { TensionChartData } from '../types';
 import { mooringLineApi } from '../api';
 
 interface TensionChartProps {
@@ -60,7 +60,7 @@ const TensionChart: React.FC<TensionChartProps> = ({ lineId, onClose }) => {
     fullTime: format(new Date(item.timestamp), 'yyyy-MM-dd HH:mm:ss'),
   }));
 
-  const CustomTooltip = ({ active, payload, label }: any) => {
+  const CustomTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       const data = payload[0].payload;
       return (

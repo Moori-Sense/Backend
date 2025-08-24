@@ -3,6 +3,9 @@ FastAPI application for Mooring Line Monitoring System
 """
 from fastapi import FastAPI, Depends, HTTPException, WebSocket, WebSocketDisconnect
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
+import os
 from sqlalchemy.orm import Session
 from typing import List, Optional
 from datetime import datetime, timedelta
@@ -57,6 +60,9 @@ class ConnectionManager:
                 pass
 
 manager = ConnectionManager()
+
+# This will be set up after all API routes are defined
+static_path = os.path.join(os.path.dirname(__file__), "static")
 
 
 @app.on_event("startup")
@@ -397,6 +403,18 @@ def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
 
+
+# Mount static files at the end, after all API routes
+if os.path.exists(static_path):
+    from fastapi.responses import HTMLResponse
+    
+    @app.get("/", response_class=HTMLResponse)
+    async def serve_frontend():
+        with open(os.path.join(static_path, "index.html"), "r") as f:
+            return f.read()
+    
+    # Serve static files for all non-API routes
+    app.mount("/", StaticFiles(directory=static_path, html=True), name="static")
 
 if __name__ == "__main__":
     import uvicorn
