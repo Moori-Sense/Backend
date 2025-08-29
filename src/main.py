@@ -11,6 +11,7 @@ from typing import List, Optional
 from datetime import datetime, timedelta
 import json
 import asyncio
+import random
 
 from database import get_db, init_db
 from schemas import (
@@ -23,6 +24,7 @@ from services import (
     MooringLineService, TensionService, WeatherService, 
     AlertService, SimulationService
 )
+from data_parser import SensorDataParser, initialize_mooring_lines
 from models import WeatherData
 
 app = FastAPI(
@@ -69,7 +71,14 @@ static_path = os.path.join(os.path.dirname(__file__), "static")
 async def startup_event():
     """Initialize database on startup"""
     init_db()
-    print("Database initialized")
+    # 8개 계류줄 초기화
+    from database import SessionLocal
+    db = SessionLocal()
+    try:
+        initialize_mooring_lines(db)
+    finally:
+        db.close()
+    print("Database initialized with 8 mooring lines")
 
 
 # ======================
@@ -90,7 +99,7 @@ def get_mooring_lines(
     active_only: bool = True,
     db: Session = Depends(get_db)
 ):
-    """Get all mooring lines with summary information"""
+    """Get all 8 mooring lines with summary information (좌측 4개, 우측 4개)"""
     lines = MooringLineService.get_all_mooring_lines(db, active_only)
     
     summaries = []
@@ -105,14 +114,20 @@ def get_mooring_lines(
         summaries.append(MooringLineSummary(
             id=line.id,
             name=line.name,
-            position=line.position,
+            position=f"{line.side}-{line.position_index}",  # 위치 정보 업데이트
             current_tension=line.current_tension,
             reference_tension=line.reference_tension,
             tension_percentage=tension_percentage,
             remaining_lifespan_percentage=line.remaining_lifespan_percentage,
-            status=status
+            status=status,
+            line_id=line.line_id,
+            side=line.side,
+            line_type=line.line_type,
+            position_index=line.position_index
         ))
     
+    # 좌측, 우측, 위치 순서대로 정렬
+    summaries.sort(key=lambda x: (x.side, x.position_index))
     return summaries
 
 
@@ -315,12 +330,16 @@ def get_dashboard_data(db: Session = Depends(get_db)):
         line_summaries.append(MooringLineSummary(
             id=line.id,
             name=line.name,
-            position=line.position,
+            position=f"{line.side}-{line.position_index}",
             current_tension=line.current_tension,
             reference_tension=line.reference_tension,
             tension_percentage=tension_percentage,
             remaining_lifespan_percentage=line.remaining_lifespan_percentage,
-            status=status
+            status=status,
+            line_id=line.line_id,
+            side=line.side,
+            line_type=line.line_type,
+            position_index=line.position_index
         ))
     
     # Get current weather
@@ -378,10 +397,73 @@ async def websocket_endpoint(websocket: WebSocket, db: Session = Depends(get_db)
     await manager.connect(websocket)
     try:
         while True:
-            # Keep connection alive
-            await asyncio.sleep(1)
+            # Keep connection alive and send periodic updates
+            await asyncio.sleep(30)  # 30초마다 업데이트
+            
+            # 주기적으로 대시보드 데이터 전송
+            try:
+                dashboard_data = get_dashboard_data(db)
+                await websocket.send_json({
+                    "type": "dashboard_update",
+                    "data": dashboard_data.dict(),
+                    "timestamp": datetime.utcnow().isoformat()
+                })
+            except Exception as e:
+                print(f"WebSocket periodic update error: {e}")
+                
     except WebSocketDisconnect:
         manager.disconnect(websocket)
+
+
+# ======================
+# Sensor Data Processing
+# ======================
+
+@app.post("/api/sensor-data/process")
+async def process_sensor_data(
+    raw_data: str,
+    db: Session = Depends(get_db)
+):
+    """실제 센서 데이터 처리"""
+    parser = SensorDataParser()
+    
+    try:
+        # 단일 라인 파싱
+        parsed_data = parser.parse_csv_line(raw_data)
+        if parsed_data:
+            parser.save_parsed_data(parsed_data, db)
+            
+            # WebSocket으로 실시간 업데이트 전송
+            await manager.broadcast({
+                "type": "sensor_data_update",
+                "data": parsed_data,
+                "timestamp": datetime.utcnow().isoformat()
+            })
+            
+            return {"message": "Sensor data processed successfully", "lines_updated": len(parsed_data['lines'])}
+        else:
+            raise HTTPException(status_code=400, detail="Failed to parse sensor data")
+            
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing sensor data: {str(e)}")
+
+
+@app.post("/api/sensor-data/upload-file")
+async def upload_sensor_file(
+    file_path: str,
+    db: Session = Depends(get_db)
+):
+    """센서 데이터 파일 전체 처리"""
+    parser = SensorDataParser()
+    
+    try:
+        processed_count = parser.process_file(file_path, db)
+        return {
+            "message": "File processed successfully", 
+            "processed_records": processed_count
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error processing file: {str(e)}")
 
 
 # ======================
@@ -398,10 +480,73 @@ def generate_sample_data(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/simulation/process-test-data")
+async def process_test_data(db: Session = Depends(get_db)):
+    """테스트 데이터 파일 처리"""
+    try:
+        test_file_path = "/home/user/webapp/testdata_sample.txt"
+        if os.path.exists(test_file_path):
+            parser = SensorDataParser()
+            processed_count = parser.process_file(test_file_path, db)
+            return {
+                "message": "Test data processed successfully", 
+                "processed_records": processed_count
+            }
+        else:
+            raise HTTPException(status_code=404, detail="Test data file not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.get("/health")
 def health_check():
     """Health check endpoint"""
     return {"status": "healthy", "timestamp": datetime.utcnow().isoformat()}
+
+
+@app.get("/api/mooring-lines/ship-layout")
+def get_ship_layout(db: Session = Depends(get_db)):
+    """배 상단뷰 레이아웃을 위한 계류줄 위치 정보"""
+    lines = MooringLineService.get_all_mooring_lines(db, active_only=True)
+    
+    # 좌측과 우측으로 그룹화
+    port_lines = []
+    starboard_lines = []
+    
+    for line in lines:
+        line_info = {
+            "id": line.id,
+            "line_id": line.line_id,
+            "name": line.name,
+            "type": line.line_type,
+            "position_index": line.position_index,
+            "current_tension": line.current_tension,
+            "reference_tension": line.reference_tension,
+            "status": MooringLineService.calculate_tension_status(
+                line.current_tension, line.reference_tension, line.max_tension
+            ),
+            "tension_percentage": (line.current_tension / line.reference_tension * 100) if line.reference_tension > 0 else 0
+        }
+        
+        if line.side == "PORT":
+            port_lines.append(line_info)
+        else:
+            starboard_lines.append(line_info)
+    
+    # 위치별 정렬
+    port_lines.sort(key=lambda x: x["position_index"])
+    starboard_lines.sort(key=lambda x: x["position_index"])
+    
+    return {
+        "port_lines": port_lines,
+        "starboard_lines": starboard_lines,
+        "total_lines": len(lines),
+        "ship_dimensions": {
+            "length": 200,  # 미터
+            "width": 50,    # 미터
+            "scale": "1:1000"  # 스케일
+        }
+    }
 
 
 # Mount static files at the end, after all API routes
@@ -418,4 +563,4 @@ if os.path.exists(static_path):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run(app, host="0.0.0.0", port=8000, reload=False)

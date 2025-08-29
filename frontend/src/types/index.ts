@@ -7,6 +7,26 @@ export interface MooringLine {
   tension_percentage: number;
   remaining_lifespan_percentage: number;
   status: 'NORMAL' | 'WARNING' | 'CRITICAL';
+  // New fields for 8-line system
+  line_id?: string;  // L0, L1, L2, L3, L4, L5, L6, L7
+  side?: 'PORT' | 'STARBOARD';
+  line_type?: 'BREAST' | 'SPRING';
+  position_index?: number;  // 0-3
+}
+
+export interface MooringLineSummary extends MooringLine {
+  // All fields from MooringLine
+}
+
+export interface ShipLayoutData {
+  port_lines: MooringLineSummary[];
+  starboard_lines: MooringLineSummary[];
+  total_lines: number;
+  ship_dimensions: {
+    length: number;
+    width: number;
+    scale: string;
+  };
 }
 
 export interface WeatherData {
@@ -32,7 +52,7 @@ export interface Alert {
 }
 
 export interface DashboardData {
-  mooring_lines: MooringLine[];
+  mooring_lines: MooringLineSummary[];
   current_weather: WeatherData;
   active_alerts: Alert[];
   system_status: {
@@ -42,6 +62,25 @@ export interface DashboardData {
     warning_alerts: number;
     system_health: string;
   };
+}
+
+// Sensor Data Types
+export interface SensorDataPoint {
+  timestamp: string;
+  raw_timestamp: string;
+  distance_to_port: number;
+  lines: {
+    [key: string]: {
+      tension: number;
+      length: number;
+    };
+  };
+}
+
+export interface ProcessedSensorData {
+  message: string;
+  lines_updated: number;
+  timestamp: string;
 }
 
 export interface TensionChartData {
@@ -59,5 +98,37 @@ export interface TensionChartData {
     humidity: number | null;
     wind_speed: number | null;
     wind_direction: number | null;
+    // Real sensor data fields
+    distance_to_port?: number;
+    line_length?: number;
+    raw_timestamp?: string;
   }[];
+}
+
+// WebSocket Message Types
+export interface WebSocketMessage {
+  type: 'dashboard_update' | 'sensor_data_update' | 'tension_update' | 'weather_update';
+  data?: any;
+  timestamp: string;
+  mooring_line_id?: number;
+  tension_value?: number;
+}
+
+// API Response Types
+export interface ApiResponse<T = any> {
+  success: boolean;
+  data?: T;
+  message?: string;
+  error?: string;
+}
+
+export interface TensionHistoryPoint {
+  id: number;
+  mooring_line_id: number;
+  tension_value: number;
+  distance_to_port?: number;
+  line_length?: number;
+  raw_timestamp?: string;
+  timestamp: string;
+  status?: string;
 }

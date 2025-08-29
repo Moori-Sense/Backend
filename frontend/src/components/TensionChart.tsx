@@ -25,28 +25,44 @@ const TensionChart: React.FC<TensionChartProps> = ({ lineId, onClose }) => {
   const [chartData, setChartData] = useState<TensionChartData | null>(null);
   const [loading, setLoading] = useState(true);
   const [timeRange, setTimeRange] = useState(24); // hours
+  const [autoRefresh, setAutoRefresh] = useState(true);
+  const [lastUpdate, setLastUpdate] = useState<string>('');
 
   useEffect(() => {
     loadChartData();
-  }, [lineId, timeRange]);
+    
+    // Auto-refresh every 5 seconds when enabled
+    let interval: number;
+    if (autoRefresh) {
+      interval = window.setInterval(() => {
+        loadChartData(true); // Silent refresh
+      }, 5000);
+    }
+    
+    return () => {
+      if (interval) window.clearInterval(interval);
+    };
+  }, [lineId, timeRange, autoRefresh]);
 
-  const loadChartData = async () => {
+  const loadChartData = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const data = await mooringLineApi.getTensionHistory(lineId, timeRange);
       setChartData(data);
+      setLastUpdate(new Date().toLocaleTimeString());
     } catch (error) {
       console.error('Failed to load chart data:', error);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
-  if (loading) {
+  if (loading && !chartData) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className="bg-white rounded-lg p-8">
-          <div className="text-center">Loading...</div>
+      <div className="bg-white rounded-lg p-8">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <div>차트 데이터 로딩 중...</div>
         </div>
       </div>
     );
@@ -73,7 +89,7 @@ const TensionChart: React.FC<TensionChartProps> = ({ lineId, onClose }) => {
                 data.status === 'CRITICAL' ? 'text-red-600' :
                 data.status === 'WARNING' ? 'text-yellow-600' : 'text-green-600'
               }`}>
-                {data.tension.toFixed(1)} kN
+                {data.tension.toFixed(2)} N
               </span>
             </p>
             {data.temperature !== null && (
@@ -100,22 +116,46 @@ const TensionChart: React.FC<TensionChartProps> = ({ lineId, onClose }) => {
             <h2 className="text-2xl font-bold text-gray-800">
               {chartData.mooring_line.name} - 장력 변화 그래프
             </h2>
-            <p className="text-sm text-gray-600 mt-1">
-              기준 장력: {chartData.mooring_line.reference_tension} kN | 
-              최대 장력: {chartData.mooring_line.max_tension} kN
-            </p>
+            <div className="text-sm text-gray-600 mt-1 space-y-1">
+              <div>
+                기준 장력: {chartData.mooring_line.reference_tension.toFixed(2)} N | 
+                최대 장력: {chartData.mooring_line.max_tension.toFixed(2)} N
+              </div>
+              <div className="flex items-center gap-2">
+                <span>마지막 업데이트: {lastUpdate}</span>
+                {loading && (
+                  <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                )}
+              </div>
+            </div>
           </div>
           <div className="flex items-center gap-4">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={autoRefresh}
+                onChange={(e) => setAutoRefresh(e.target.checked)}
+                className="rounded"
+              />
+              실시간 업데이트
+            </label>
             <select
               value={timeRange}
               onChange={(e) => setTimeRange(Number(e.target.value))}
               className="px-3 py-1 border rounded-lg text-sm"
             >
+              <option value={1}>1시간</option>
               <option value={6}>6시간</option>
               <option value={12}>12시간</option>
               <option value={24}>24시간</option>
               <option value={48}>48시간</option>
             </select>
+            <button
+              onClick={() => loadChartData()}
+              className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+            >
+              새로고침
+            </button>
             <button
               onClick={onClose}
               className="text-gray-500 hover:text-gray-700 text-2xl"
@@ -138,8 +178,8 @@ const TensionChart: React.FC<TensionChartProps> = ({ lineId, onClose }) => {
                   tick={{ fontSize: 12 }}
                 />
                 <YAxis 
-                  label={{ value: '장력 (kN)', angle: -90, position: 'insideLeft' }}
-                  domain={[0, chartData.mooring_line.max_tension * 1.1]}
+                  label={{ value: '장력 (N)', angle: -90, position: 'insideLeft' }}
+                  domain={[0, chartData.mooring_line.max_tension * 1.2]}
                 />
                 <Tooltip content={<CustomTooltip />} />
                 <Legend />
@@ -219,25 +259,25 @@ const TensionChart: React.FC<TensionChartProps> = ({ lineId, onClose }) => {
               <div>
                 <p className="text-gray-600">최대 장력</p>
                 <p className="font-bold text-lg">
-                  {Math.max(...processedData.map(d => d.tension)).toFixed(1)} kN
+                  {Math.max(...processedData.map(d => d.tension)).toFixed(2)} N
                 </p>
               </div>
               <div>
                 <p className="text-gray-600">최소 장력</p>
                 <p className="font-bold text-lg">
-                  {Math.min(...processedData.map(d => d.tension)).toFixed(1)} kN
+                  {Math.min(...processedData.map(d => d.tension)).toFixed(2)} N
                 </p>
               </div>
               <div>
                 <p className="text-gray-600">평균 장력</p>
                 <p className="font-bold text-lg">
-                  {(processedData.reduce((sum, d) => sum + d.tension, 0) / processedData.length).toFixed(1)} kN
+                  {(processedData.reduce((sum, d) => sum + d.tension, 0) / processedData.length).toFixed(2)} N
                 </p>
               </div>
               <div>
-                <p className="text-gray-600">경고 발생</p>
+                <p className="text-gray-600">데이터 포인트</p>
                 <p className="font-bold text-lg">
-                  {processedData.filter(d => d.status !== 'NORMAL').length} 회
+                  {processedData.length} 개
                 </p>
               </div>
             </div>
