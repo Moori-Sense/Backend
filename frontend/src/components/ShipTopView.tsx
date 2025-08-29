@@ -55,63 +55,41 @@ const ShipTopView: React.FC<ShipTopViewProps> = ({
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-8">
-      <h2 className="text-2xl font-bold text-center mb-6 text-gray-800">
-        선박 계류줄 배치도 (상단뷰)
-      </h2>
+
       
-      <div className="relative mx-auto" style={{ width: '600px', height: '400px' }}>
+      <div className="relative mx-auto" style={{ width: '500px', height: '600px' }}>
         {/* 배 본체 */}
         <div className="absolute inset-0">
           {/* 선체 메인 */}
           <div 
-            className="absolute bg-gradient-to-b from-blue-100 to-blue-200 border-4 border-blue-400 rounded-t-full"
+            className="absolute bg-gradient-to-b from-blue-100 to-blue-200 border-4 border-blue-400"
             style={{
-              left: '100px',
+              left: '75px',
               top: '50px',
-              width: '400px',
-              height: '300px',
-              borderRadius: '200px 200px 50px 50px'
+              width: '350px',
+              height: '500px',
+              borderRadius: '175px 175px 30px 30px'
             }}
           >
             {/* 선교 (브릿지) */}
             <div 
               className="absolute bg-blue-300 border-2 border-blue-500 rounded"
               style={{
-                left: '150px',
-                top: '100px',
+                left: '125px',
+                top: '200px',
                 width: '100px',
-                height: '50px'
+                height: '60px'
               }}
             >
-              <div className="flex items-center justify-center h-full text-sm font-bold text-blue-800">
-                선교
-              </div>
             </div>
             
-            {/* 선수 표시 */}
-            <div 
-              className="absolute text-center font-bold text-blue-800"
-              style={{ left: '175px', top: '10px' }}
-            >
-              선수 (BOW)
-            </div>
-            
-            {/* 선미 표시 */}
-            <div 
-              className="absolute text-center font-bold text-blue-800"
-              style={{ left: '175px', bottom: '10px' }}
-            >
-              선미 (STERN)
-            </div>
+
           </div>
         </div>
 
         {/* 좌현 (PORT) 계류줄들 */}
         <div className="absolute left-0 top-1/2 transform -translate-y-1/2">
-          <div className="text-sm font-bold text-gray-700 mb-2 text-center">
-            좌현 (PORT)
-          </div>
-          <div className="space-y-4">
+          <div className="space-y-8">
             {portLines.map((line, index) => (
               <div key={line.id} className="flex items-center">
                 <MooringLineButton 
@@ -119,7 +97,7 @@ const ShipTopView: React.FC<ShipTopViewProps> = ({
                   position="port" 
                   index={index} 
                 />
-                <div className="ml-2 w-16 h-0.5 bg-gray-400"></div>
+                <div className="ml-2 w-20 h-0.5 bg-gray-600"></div>
               </div>
             ))}
           </div>
@@ -127,13 +105,10 @@ const ShipTopView: React.FC<ShipTopViewProps> = ({
 
         {/* 우현 (STARBOARD) 계류줄들 */}
         <div className="absolute right-0 top-1/2 transform -translate-y-1/2">
-          <div className="text-sm font-bold text-gray-700 mb-2 text-center">
-            우현 (STARBOARD)
-          </div>
-          <div className="space-y-4">
+          <div className="space-y-8">
             {starboardLines.map((line, index) => (
               <div key={line.id} className="flex items-center">
-                <div className="mr-2 w-16 h-0.5 bg-gray-400"></div>
+                <div className="mr-2 w-20 h-0.5 bg-gray-600"></div>
                 <MooringLineButton 
                   line={line} 
                   position="starboard" 
@@ -144,36 +119,11 @@ const ShipTopView: React.FC<ShipTopViewProps> = ({
           </div>
         </div>
 
-        {/* 범례 */}
-        <div className="absolute bottom-0 left-0 bg-white/90 backdrop-blur-sm rounded-lg p-3 border">
-          <div className="text-sm font-bold mb-2">상태 범례</div>
-          <div className="flex flex-wrap gap-2 text-xs">
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-green-500 rounded mr-1"></div>
-              <span>정상</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-yellow-500 rounded mr-1"></div>
-              <span>주의</span>
-            </div>
-            <div className="flex items-center">
-              <div className="w-3 h-3 bg-red-500 rounded mr-1"></div>
-              <span>위험</span>
-            </div>
-          </div>
-        </div>
 
-        {/* 나침반 */}
-        <div className="absolute top-4 right-4 w-12 h-12 bg-white rounded-full border-2 border-gray-300 flex items-center justify-center">
-          <div className="text-xs font-bold text-gray-700">N</div>
-          <div className="absolute w-6 h-0.5 bg-red-500 transform rotate-0"></div>
-        </div>
 
-        {/* 스케일 */}
-        <div className="absolute bottom-4 right-4 text-xs text-gray-600">
-          <div>Scale: 1:1000</div>
-          <div>선체 길이: ~200m</div>
-        </div>
+
+
+
       </div>
 
       {/* 실시간 정보 패널 */}

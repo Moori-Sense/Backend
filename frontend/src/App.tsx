@@ -13,6 +13,7 @@ function App() {
   const [error, setError] = useState<string | null>(null);
   const [dataGenerated, setDataGenerated] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
+  const [liveSimulationActive, setLiveSimulationActive] = useState(false);
 
   useEffect(() => {
     loadDashboardData();
@@ -88,21 +89,63 @@ function App() {
     }
   };
 
-  const processTestData = async () => {
+
+
+  const startLiveSimulation = async () => {
     try {
       setLoading(true);
-      const response = await fetch('/api/simulation/process-test-data', { method: 'POST' });
+      const response = await fetch('/api/simulation/start-live', { method: 'POST' });
       if (response.ok) {
         const result = await response.json();
-        console.log('Test data processed:', result);
+        console.log('Live simulation started:', result);
+        setLiveSimulationActive(true);
         setDataGenerated(true);
         await loadDashboardData();
       } else {
-        throw new Error('Failed to process test data');
+        throw new Error('Failed to start live simulation');
       }
     } catch (err) {
-      console.error('Failed to process test data:', err);
-      setError('Failed to process test data');
+      console.error('Failed to start live simulation:', err);
+      setError('Failed to start live simulation');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const stopLiveSimulation = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/simulation/stop-live', { method: 'POST' });
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Live simulation stopped:', result);
+        setLiveSimulationActive(false);
+      } else {
+        throw new Error('Failed to stop live simulation');
+      }
+    } catch (err) {
+      console.error('Failed to stop live simulation:', err);
+      setError('Failed to stop live simulation');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const processFullData = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/simulation/process-full-data', { method: 'POST' });
+      if (response.ok) {
+        const result = await response.json();
+        console.log('Full data processed:', result);
+        setDataGenerated(true);
+        await loadDashboardData();
+      } else {
+        throw new Error('Failed to process full data');
+      }
+    } catch (err) {
+      console.error('Failed to process full data:', err);
+      setError('Failed to process full data');
     } finally {
       setLoading(false);
     }
@@ -177,21 +220,45 @@ function App() {
                 </span>
               </div>
             )}
-            <div className="flex gap-2">
-              {!dataGenerated && dashboardData?.mooring_lines.length === 0 && (
+            <div className="flex gap-2 items-center">
+              {liveSimulationActive ? (
+                <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-1">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse"></div>
+                    <span className="text-sm text-green-400 font-medium">LIVE 시뮬레이션</span>
+                  </div>
+                  <button
+                    onClick={stopLiveSimulation}
+                    className="px-3 py-1 bg-red-500 text-white rounded text-sm hover:bg-red-600"
+                  >
+                    중지
+                  </button>
+                </div>
+              ) : (
                 <>
-                  <button
-                    onClick={generateSampleData}
-                    className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
-                  >
-                    샘플 데이터
-                  </button>
-                  <button
-                    onClick={processTestData}
-                    className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
-                  >
-                    실제 데이터 처리
-                  </button>
+                  {dashboardData?.mooring_lines.length === 0 ? (
+                    <>
+                      <button
+                        onClick={processFullData}
+                        className="px-3 py-1 bg-blue-500 text-white rounded text-sm hover:bg-blue-600"
+                      >
+                        전체 데이터 처리
+                      </button>
+                      <button
+                        onClick={generateSampleData}
+                        className="px-3 py-1 bg-green-500 text-white rounded text-sm hover:bg-green-600"
+                      >
+                        샘플 데이터
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={startLiveSimulation}
+                      className="px-4 py-1 bg-orange-500 text-white rounded text-sm hover:bg-orange-600 font-medium"
+                    >
+                      🔴 LIVE 시작 (30초 간격)
+                    </button>
+                  )}
                 </>
               )}
             </div>
@@ -250,21 +317,27 @@ function App() {
                 <div className="bg-white rounded-lg shadow-md p-8 text-center">
                   <p className="text-gray-600 mb-4">계류줄 데이터가 없습니다.</p>
                   <p className="text-sm text-gray-500 mb-6">
-                    실제 센서 데이터를 처리하거나 샘플 데이터를 생성해보세요.
+                    실제 센서 데이터를 처리하고 30초마다 실시간 업데이트를 시작해보세요.
                   </p>
                   {!dataGenerated && (
                     <div className="flex gap-4 justify-center">
                       <button
-                        onClick={processTestData}
-                        className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
+                        onClick={processFullData}
+                        className="px-6 py-3 bg-blue-500 text-white rounded-lg hover:bg-blue-600 flex items-center gap-2"
                       >
-                        📊 실제 센서 데이터 처리
+                        📊 전체 데이터 처리 (44건)
+                      </button>
+                      <button
+                        onClick={startLiveSimulation}
+                        className="px-6 py-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 flex items-center gap-2"
+                      >
+                        🔴 LIVE 시뮬레이션 시작
                       </button>
                       <button
                         onClick={generateSampleData}
-                        className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600"
+                        className="px-6 py-3 bg-green-500 text-white rounded-lg hover:bg-green-600 flex items-center gap-2"
                       >
-                        🎲 샘플 데이터 생성
+                        🎲 샘플 데이터
                       </button>
                     </div>
                   )}
@@ -294,12 +367,19 @@ function App() {
                 </h2>
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-center">
                   <div className="bg-white rounded-lg p-3">
-                    <p className="text-gray-600 text-sm">연결 상태</p>
-                    <p className={`text-lg font-bold ${
-                      wsConnected ? 'text-green-600' : 'text-red-600'
-                    }`}>
-                      {wsConnected ? 'LIVE' : 'OFFLINE'}
-                    </p>
+                    <p className="text-gray-600 text-sm">시스템 상태</p>
+                    <div className="flex items-center gap-2">
+                      <div className={`w-3 h-3 rounded-full ${
+                        liveSimulationActive ? 'bg-orange-500 animate-pulse' : 
+                        wsConnected ? 'bg-green-500' : 'bg-red-500'
+                      }`}></div>
+                      <p className={`text-sm font-bold ${
+                        liveSimulationActive ? 'text-orange-600' :
+                        wsConnected ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {liveSimulationActive ? 'LIVE SIM' : wsConnected ? 'ONLINE' : 'OFFLINE'}
+                      </p>
+                    </div>
                   </div>
                   <div className="bg-white rounded-lg p-3">
                     <p className="text-gray-600 text-sm">활성 계류줄</p>

@@ -26,6 +26,7 @@ from services import (
 )
 from data_parser import SensorDataParser, initialize_mooring_lines
 from models import WeatherData
+from live_simulation import start_live_simulation, stop_live_simulation, get_simulation_status
 
 app = FastAPI(
     title="Mooring Line Monitoring System",
@@ -480,6 +481,24 @@ def generate_sample_data(db: Session = Depends(get_db)):
         raise HTTPException(status_code=500, detail=str(e))
 
 
+@app.post("/api/simulation/process-full-data")
+async def process_full_sensor_data(db: Session = Depends(get_db)):
+    """전체 센서 데이터 파일 일괄 처리"""
+    try:
+        full_file_path = "/home/user/webapp/testdata_full.txt"
+        if os.path.exists(full_file_path):
+            parser = SensorDataParser()
+            processed_count = parser.process_file(full_file_path, db)
+            return {
+                "message": "Full sensor data processed successfully", 
+                "processed_records": processed_count
+            }
+        else:
+            raise HTTPException(status_code=404, detail="Full sensor data file not found")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
+
+
 @app.post("/api/simulation/process-test-data")
 async def process_test_data(db: Session = Depends(get_db)):
     """테스트 데이터 파일 처리"""
@@ -496,6 +515,46 @@ async def process_test_data(db: Session = Depends(get_db)):
             raise HTTPException(status_code=404, detail="Test data file not found")
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/simulation/start-live")
+async def start_live_data_simulation():
+    """실시간 데이터 시뮬레이션 시작 (30초 간격)"""
+    try:
+        data_file_path = "/home/user/webapp/testdata_full.txt"
+        if not os.path.exists(data_file_path):
+            raise HTTPException(status_code=404, detail="Sensor data file not found")
+        
+        # 백그라운드에서 시뮬레이션 시작
+        asyncio.create_task(start_live_simulation(data_file_path, interval=30))
+        
+        return {
+            "message": "Live data simulation started",
+            "interval": "30 seconds",
+            "data_file": "testdata_full.txt"
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to start simulation: {str(e)}")
+
+
+@app.post("/api/simulation/stop-live")
+async def stop_live_data_simulation():
+    """실시간 데이터 시뮬레이션 중지"""
+    try:
+        stop_live_simulation()
+        return {"message": "Live data simulation stopped"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to stop simulation: {str(e)}")
+
+
+@app.get("/api/simulation/status")
+async def get_live_simulation_status():
+    """실시간 시뮬레이션 상태 확인"""
+    try:
+        status = get_simulation_status()
+        return status
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get simulation status: {str(e)}")
 
 
 @app.get("/health")
