@@ -1,13 +1,18 @@
 export interface MooringLine {
   id: number;
+  line_id: string;  // L0, L1, L2, L3, L4, L5, L6, L7
   name: string;
-  position: string | null;
+  side: string | null;  // PORT, STARBOARD
+  position_index: number | null;  // 0-3
   current_tension: number;
   reference_tension: number;
   tension_percentage: number;
   remaining_lifespan_percentage: number;
   status: 'NORMAL' | 'WARNING' | 'CRITICAL';
 }
+
+// Alias for backwards compatibility
+export type MooringLineSummary = MooringLine;
 
 export interface WeatherData {
   temperature: number;

@@ -63,10 +63,12 @@ class MooringLineResponse(MooringLineBase):
 
 
 class MooringLineSummary(BaseModel):
-    """계류줄 요약 정보"""
+    """계류줄 요약 정보 - 8개 계류줄 시스템"""
     id: int
+    line_id: str  # L0, L1, L2, L3, L4, L5, L6, L7
     name: str
-    position: Optional[str]
+    side: Optional[str]  # PORT, STARBOARD
+    position_index: Optional[int]  # 0-3
     current_tension: float
     reference_tension: float
     tension_percentage: float  # (current/reference) * 100

@@ -35,4 +35,17 @@ export const simulationApi = {
   generateSampleData: async (): Promise<void> => {
     await api.post('/simulation/generate-data');
   },
+  
+  startSimulation: async (): Promise<void> => {
+    await api.post('/simulation/start');
+  },
+  
+  stopSimulation: async (): Promise<void> => {
+    await api.post('/simulation/stop');
+  },
+  
+  getSimulationStatus: async (): Promise<any> => {
+    const response = await api.get('/simulation/status');
+    return response.data;
+  },
 };
