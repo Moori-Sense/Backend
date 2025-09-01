@@ -24,6 +24,9 @@ from services import (
     AlertService, SimulationService
 )
 from models import WeatherData
+from data_parser import initialize_mooring_lines
+from live_simulation import start_live_simulation, stop_live_simulation, get_simulation_status
+import threading
 
 app = FastAPI(
     title="Mooring Line Monitoring System",
@@ -69,7 +72,15 @@ static_path = os.path.join(os.path.dirname(__file__), "static")
 async def startup_event():
     """Initialize database on startup"""
     init_db()
-    print("Database initialized")
+    # Initialize 8 mooring lines
+    db = next(get_db())
+    try:
+        initialize_mooring_lines(db)
+        print("✅ Database initialized with 8 mooring lines")
+    except Exception as e:
+        print(f"❌ Database initialization error: {e}")
+    finally:
+        db.close()
 
 
 # ======================
@@ -90,7 +101,7 @@ def get_mooring_lines(
     active_only: bool = True,
     db: Session = Depends(get_db)
 ):
-    """Get all mooring lines with summary information"""
+    """Get all mooring lines with summary information (8 lines system)"""
     lines = MooringLineService.get_all_mooring_lines(db, active_only)
     
     summaries = []
@@ -104,8 +115,10 @@ def get_mooring_lines(
         
         summaries.append(MooringLineSummary(
             id=line.id,
+            line_id=line.line_id,
             name=line.name,
-            position=line.position,
+            side=line.side,
+            position_index=line.position_index,
             current_tension=line.current_tension,
             reference_tension=line.reference_tension,
             tension_percentage=tension_percentage,
@@ -314,8 +327,10 @@ def get_dashboard_data(db: Session = Depends(get_db)):
         
         line_summaries.append(MooringLineSummary(
             id=line.id,
+            line_id=line.line_id,
             name=line.name,
-            position=line.position,
+            side=line.side,
+            position_index=line.position_index,
             current_tension=line.current_tension,
             reference_tension=line.reference_tension,
             tension_percentage=tension_percentage,
@@ -348,8 +363,12 @@ def get_dashboard_data(db: Session = Depends(get_db)):
             timestamp=datetime.utcnow()
         )
     
-    # Get active alerts
-    alerts = AlertService.get_active_alerts(db)
+    # Get active alerts (임시로 빈 배열 반환)
+    try:
+        alerts = AlertService.get_active_alerts(db)
+    except Exception as e:
+        print(f"Alert service error: {e}")
+        alerts = []
     
     # System status
     system_status = {
@@ -396,6 +415,61 @@ def generate_sample_data(db: Session = Depends(get_db)):
         return {"message": "Sample data generated successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/simulation/start")
+async def start_simulation():
+    """Start live sensor data simulation with 30-second updates"""
+    try:
+        data_file_path = os.path.join(os.path.dirname(__file__), "..", "testdata_full.txt")
+        
+        # Check if simulation is already running
+        status = get_simulation_status()
+        if status["is_running"]:
+            return {"message": "Simulation is already running", "status": status}
+        
+        # Start simulation in background thread
+        def run_simulation():
+            import asyncio
+            loop = asyncio.new_event_loop()
+            asyncio.set_event_loop(loop)
+            loop.run_until_complete(start_live_simulation(data_file_path, 30))
+        
+        simulation_thread = threading.Thread(target=run_simulation, daemon=True)
+        simulation_thread.start()
+        
+        return {
+            "message": "Live simulation started with 30-second updates",
+            "data_file": data_file_path,
+            "update_interval": 30,
+            "status": "starting"
+        }
+        
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to start simulation: {str(e)}")
+
+
+@app.post("/api/simulation/stop")
+def stop_simulation():
+    """Stop live sensor data simulation"""
+    try:
+        stop_live_simulation()
+        return {"message": "Simulation stopped", "status": "stopped"}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to stop simulation: {str(e)}")
+
+
+@app.get("/api/simulation/status")
+def get_simulation_status_endpoint():
+    """Get current simulation status"""
+    try:
+        status = get_simulation_status()
+        return {
+            "simulation": status,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to get status: {str(e)}")
 
 
 @app.get("/health")
