@@ -144,6 +144,81 @@ def get_simulation_status_endpoint():
     """Get simulation status"""
     return {"simulation": get_simulation_status()}
 
+@app.get("/api/tension/{line_id}/chart-data")
+def get_tension_chart_data(line_id: int, hours: int = 24, db: Session = Depends(get_db)):
+    """Get tension chart data for individual mooring line"""
+    try:
+        from sqlalchemy import and_
+        from models import TensionHistory
+        from datetime import timedelta
+        
+        # Get mooring line info
+        line = db.query(MooringLine).filter(MooringLine.id == line_id).first()
+        if not line:
+            return {"error": "Mooring line not found"}
+        
+        # Get tension history for the specified time range
+        start_time = datetime.utcnow() - timedelta(hours=hours)
+        tension_history = db.query(TensionHistory).filter(
+            and_(
+                TensionHistory.mooring_line_id == line_id,
+                TensionHistory.timestamp >= start_time
+            )
+        ).order_by(TensionHistory.timestamp.desc()).limit(1000).all()
+        
+        # If no data, create some sample data
+        if not tension_history:
+            # Create sample data points
+            sample_data = []
+            for i in range(24):  # Last 24 hours of sample data
+                sample_time = datetime.utcnow() - timedelta(hours=23-i)
+                sample_data.append({
+                    "timestamp": sample_time.isoformat(),
+                    "tension": line.current_tension + (i % 5 - 2) * 0.1,  # Some variation
+                    "status": "NORMAL",
+                    "temperature": 20.0 + (i % 10 - 5),
+                    "humidity": 60.0 + (i % 20 - 10),
+                    "wind_speed": 5.0 + (i % 6),
+                    "wind_direction": (i * 15) % 360
+                })
+            
+            return {
+                "mooring_line": {
+                    "id": line.id,
+                    "name": line.name,
+                    "reference_tension": line.reference_tension,
+                    "max_tension": line.max_tension
+                },
+                "data": sample_data
+            }
+        
+        # Convert actual data
+        chart_data = []
+        for record in reversed(tension_history):  # Reverse to get chronological order
+            chart_data.append({
+                "timestamp": record.timestamp.isoformat(),
+                "tension": record.tension_value,
+                "status": record.status or "NORMAL",
+                "temperature": None,  # We don't have weather data linked
+                "humidity": None,
+                "wind_speed": None,
+                "wind_direction": None
+            })
+        
+        return {
+            "mooring_line": {
+                "id": line.id,
+                "name": line.name,
+                "reference_tension": line.reference_tension,
+                "max_tension": line.max_tension
+            },
+            "data": chart_data
+        }
+        
+    except Exception as e:
+        print(f"Chart data error: {e}")
+        return {"error": str(e)}
+
 @app.get("/health")
 def health_check():
     """Health check endpoint"""
