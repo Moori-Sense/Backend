@@ -6,8 +6,8 @@ from sqlalchemy import desc, and_
 from typing import List, Optional
 from datetime import datetime, timedelta
 import random  # For simulation
-from models import MooringLine, TensionHistory, WeatherData, Alert
-from schemas import (
+from src.models import MooringLine, TensionHistory, WeatherData, Alert
+from src.schemas import (
     MooringLineCreate, MooringLineUpdate, TensionHistoryCreate,
     WeatherDataCreate, AlertCreate, TensionStatus, AlertSeverity, AlertType,
     TensionTimeSeriesData

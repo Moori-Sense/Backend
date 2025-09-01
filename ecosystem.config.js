@@ -1,20 +1,12 @@
 module.exports = {
-  apps: [
-    {
-      name: 'backend',
-      script: 'python3',
-      args: 'main.py',
-      cwd: '/home/user/webapp/src',
-      interpreter: 'none',
-      env: {
-        PYTHONUNBUFFERED: '1'
-      }
-    },
-    {
-      name: 'frontend',
-      script: 'npm',
-      args: 'run dev',
-      cwd: '/home/user/webapp/frontend'
+  apps: [{
+    name: 'mooring-backend',
+    script: 'python',
+    args: '-m uvicorn src.main_simple:app --host 0.0.0.0 --port 8001 --reload',
+    cwd: '/home/user/webapp',
+    interpreter: 'none',
+    env: {
+      PYTHONPATH: '/home/user/webapp'
     }
-  ]
+  }]
 };

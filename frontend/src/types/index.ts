@@ -2,18 +2,14 @@ export interface MooringLine {
   id: number;
   line_id: string;  // L0, L1, L2, L3, L4, L5, L6, L7
   name: string;
-  side: string | null;  // PORT, STARBOARD
-  position_index: number | null;  // 0-3
+  side: 'PORT' | 'STARBOARD';
+  position_index: number;  // 0-3
+  line_type?: 'BREAST' | 'SPRING';
   current_tension: number;
   reference_tension: number;
   tension_percentage: number;
   remaining_lifespan_percentage: number;
   status: 'NORMAL' | 'WARNING' | 'CRITICAL';
-  // New fields for 8-line system
-  line_id?: string;  // L0, L1, L2, L3, L4, L5, L6, L7
-  side?: 'PORT' | 'STARBOARD';
-  line_type?: 'BREAST' | 'SPRING';
-  position_index?: number;  // 0-3
 }
 
 export interface MooringLineSummary extends MooringLine {
@@ -31,9 +27,6 @@ export interface ShipLayoutData {
   };
 }
 
-// Alias for backwards compatibility
-export type MooringLineSummary = MooringLine;
-
 export interface WeatherData {
   temperature: number;
   humidity: number;
@@ -43,6 +36,8 @@ export interface WeatherData {
   pressure: number | null;
   wave_height: number | null;
   timestamp: string;
+  location?: string;
+  description?: string;
 }
 
 export interface Alert {

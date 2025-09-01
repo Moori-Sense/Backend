@@ -6,9 +6,9 @@ import asyncio
 import time
 from datetime import datetime
 from sqlalchemy.orm import Session
-from database import SessionLocal
-from data_parser import SensorDataParser
-from models import MooringLine, TensionHistory, Alert
+from src.database import SessionLocal
+from src.data_parser import SensorDataParser
+from src.models import MooringLine, TensionHistory, Alert
 import random
 from typing import List, Dict
 

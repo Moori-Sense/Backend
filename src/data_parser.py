@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 from sqlalchemy.orm import Session
 import random
 
-from models import MooringLine, TensionHistory
+from src.models import MooringLine, TensionHistory
 
 
 class SensorDataParser:
