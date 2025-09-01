@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
 import type { DashboardData } from './types';
-import { dashboardApi, simulationApi } from './api';
+import { dashboardApi, simulationApi, testApi } from './api';
 import MooringLineCard from './components/MooringLineCard';
 import WeatherDisplay from './components/WeatherDisplay';
 import TensionChart from './components/TensionChart';
 import ShipTopView from './components/ShipTopView';
+import CriticalAlertModal from './components/CriticalAlertModal';
 import './App.css';
 
 function App() {
@@ -15,6 +16,10 @@ function App() {
   const [dataGenerated, setDataGenerated] = useState(false);
   const [simulationRunning, setSimulationRunning] = useState(false);
   const [simulationLoading, setSimulationLoading] = useState(false);
+  
+  // Critical Alert Modal 상태
+  const [showCriticalAlert, setShowCriticalAlert] = useState(false);
+  const [criticalLines, setCriticalLines] = useState<any[]>([]);
 
   useEffect(() => {
     loadDashboardData();
@@ -28,6 +33,27 @@ function App() {
       const data = await dashboardApi.getDashboard();
       setDashboardData(data);
       setError(null);
+      
+      // 위험 상태 계류줄 감지 로직
+      if (data && data.mooring_lines) {
+        const currentCriticalLines = data.mooring_lines.filter(
+          line => line.status === 'CRITICAL'
+        );
+        
+        // 새로운 위험 상태가 발생했는지 확인
+        const prevCriticalCount = criticalLines.length;
+        const newCriticalCount = currentCriticalLines.length;
+        
+        setCriticalLines(currentCriticalLines);
+        
+        // 새로운 위험 상황이 발생했을 때만 모달 표시
+        if (newCriticalCount > 0 && newCriticalCount !== prevCriticalCount) {
+          setShowCriticalAlert(true);
+        } else if (newCriticalCount === 0) {
+          // 모든 위험 상태가 해결되면 모달 닫기
+          setShowCriticalAlert(false);
+        }
+      }
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
       setError('Failed to load dashboard data');
@@ -84,6 +110,39 @@ function App() {
       setSimulationRunning(status.simulation.is_running);
     } catch (err) {
       console.error('Failed to check simulation status:', err);
+    }
+  };
+
+  // 위험 알림 모달 닫기
+  const handleCloseCriticalAlert = () => {
+    setShowCriticalAlert(false);
+  };
+
+  // 테스트용 위험 알림 트리거
+  const triggerTestAlert = async () => {
+    try {
+      await testApi.triggerCriticalAlert();
+      // 데이터 새로고침하여 위험 상태 반영
+      setTimeout(() => {
+        loadDashboardData();
+      }, 500);
+    } catch (err) {
+      console.error('Failed to trigger test alert:', err);
+    }
+  };
+
+  // 테스트용 정상 상태 복구
+  const resetToNormal = async () => {
+    try {
+      await testApi.resetToNormal();
+      // 데이터 새로고침하여 정상 상태 반영
+      setTimeout(() => {
+        loadDashboardData();
+      }, 500);
+      // 모달도 닫기
+      setShowCriticalAlert(false);
+    } catch (err) {
+      console.error('Failed to reset to normal:', err);
     }
   };
 
@@ -174,6 +233,22 @@ function App() {
                       🔄 실시간 업데이트 중 (30초 간격)
                     </span>
                   )}
+                  
+                  {/* 알림 테스트 버튼들 */}
+                  <div className="flex gap-2 ml-4 border-l border-blue-400 pl-4">
+                    <button
+                      onClick={triggerTestAlert}
+                      className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
+                    >
+                      🚨 위험알림 테스트
+                    </button>
+                    <button
+                      onClick={resetToNormal}
+                      className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600 transition-colors"
+                    >
+                      ✅ 정상복구
+                    </button>
+                  </div>
                 </div>
               )}
             </div>
@@ -315,6 +390,13 @@ function App() {
           onClose={() => setSelectedLineId(null)}
         />
       )}
+
+      {/* Critical Alert Modal */}
+      <CriticalAlertModal
+        isOpen={showCriticalAlert}
+        criticalLines={criticalLines}
+        onClose={handleCloseCriticalAlert}
+      />
     </div>
   );
 }

@@ -138,11 +138,22 @@ def get_mooring_lines(db: Session = Depends(get_db)):
         result = []
         for line in lines:
             tension_percentage = (line.current_tension / line.reference_tension * 100) if line.reference_tension > 0 else 0
-            # Simple status calculation
-            if line.current_tension > line.reference_tension * 1.2:
-                status = "WARNING"
+            # Enhanced status calculation with alert simulation
+            current_time = datetime.utcnow()
+            
+            # 시뮬레이션이 실행 중이고 특정 시간대에 위험 상황 시뮬레이션
+            is_simulation_time = (current_time.second % 60) < 20  # 매분 처음 20초 동안
+            
+            # 임의로 일부 라인을 위험 상태로 설정 (시뮬레이션용)
+            if is_simulation_time and line.line_id in ['L2', 'L6']:  # L2, L6 라인을 위험 상태로
+                # 위험 상태 시뮬레이션
+                line.current_tension = line.max_tension * 0.95  # 최대 장력의 95%
+                tension_percentage = (line.current_tension / line.reference_tension * 100)
+                status = "CRITICAL"
             elif line.current_tension > line.max_tension * 0.9:
                 status = "CRITICAL"
+            elif line.current_tension > line.reference_tension * 1.2:
+                status = "WARNING"
             else:
                 status = "NORMAL"
             
@@ -313,6 +324,47 @@ def get_tension_chart_data(line_id: int, hours: int = 24, db: Session = Depends(
         
     except Exception as e:
         print(f"Chart data error: {e}")
+        return {"error": str(e)}
+
+@app.post("/api/test/trigger-critical")
+def trigger_critical_alert(db: Session = Depends(get_db)):
+    """테스트용: 위험 상황 강제 발생"""
+    try:
+        # L2와 L6 라인을 강제로 위험 상태로 설정
+        critical_lines = db.query(MooringLine).filter(
+            MooringLine.line_id.in_(['L2', 'L6'])
+        ).all()
+        
+        for line in critical_lines:
+            # 최대 장력의 95%로 설정하여 CRITICAL 상태 만들기
+            line.current_tension = line.max_tension * 0.95
+            
+        db.commit()
+        
+        return {
+            "message": "Critical alert triggered for L2 and L6",
+            "affected_lines": ["L2", "L6"],
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
+@app.post("/api/test/reset-normal")  
+def reset_to_normal(db: Session = Depends(get_db)):
+    """테스트용: 모든 라인을 정상 상태로 복구"""
+    try:
+        lines = db.query(MooringLine).all()
+        for line in lines:
+            # 기준 장력의 80-100% 사이로 정상화
+            line.current_tension = line.reference_tension * random.uniform(0.8, 1.0)
+            
+        db.commit()
+        
+        return {
+            "message": "All lines reset to normal status",
+            "timestamp": datetime.utcnow().isoformat()
+        }
+    except Exception as e:
         return {"error": str(e)}
 
 @app.get("/api/weather")
