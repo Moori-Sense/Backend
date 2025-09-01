@@ -363,8 +363,12 @@ def get_dashboard_data(db: Session = Depends(get_db)):
             timestamp=datetime.utcnow()
         )
     
-    # Get active alerts
-    alerts = AlertService.get_active_alerts(db)
+    # Get active alerts (임시로 빈 배열 반환)
+    try:
+        alerts = AlertService.get_active_alerts(db)
+    except Exception as e:
+        print(f"Alert service error: {e}")
+        alerts = []
     
     # System status
     system_status = {
