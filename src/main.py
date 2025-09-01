@@ -327,8 +327,10 @@ def get_dashboard_data(db: Session = Depends(get_db)):
         
         line_summaries.append(MooringLineSummary(
             id=line.id,
+            line_id=line.line_id,
             name=line.name,
-            position=line.position,
+            side=line.side,
+            position_index=line.position_index,
             current_tension=line.current_tension,
             reference_tension=line.reference_tension,
             tension_percentage=tension_percentage,

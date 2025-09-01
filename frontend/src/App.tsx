@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import type { DashboardData, MooringLineSummary } from './types';
+import type { DashboardData } from './types';
 import { dashboardApi, simulationApi } from './api';
 import MooringLineCard from './components/MooringLineCard';
 import WeatherDisplay from './components/WeatherDisplay';
@@ -150,7 +150,7 @@ function App() {
                   샘플 데이터 생성
                 </button>
               )}
-              {dashboardData?.mooring_lines.length > 0 && (
+              {dashboardData?.mooring_lines && dashboardData.mooring_lines.length > 0 && (
                 <div className="flex gap-2">
                   {!simulationRunning ? (
                     <button
@@ -229,7 +229,7 @@ function App() {
             {/* Ship Top View - 8 계류줄 시스템 */}
             <div className="mb-6">
               <h2 className="text-xl font-bold mb-3">선박 계류 상태 (상부 뷰)</h2>
-              {dashboardData.mooring_lines.length === 0 ? (
+              {!dashboardData.mooring_lines || dashboardData.mooring_lines.length === 0 ? (
                 <div className="bg-white rounded-lg shadow-md p-8 text-center">
                   <p className="text-gray-600 mb-4">계류줄 데이터가 없습니다.</p>
                   {!dataGenerated && (

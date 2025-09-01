@@ -32,7 +32,10 @@ const MooringLineCard: React.FC<MooringLineCardProps> = ({ line, onClick }) => {
       <div className="flex justify-between items-start mb-4">
         <div>
           <h3 className="text-xl font-bold text-gray-800">{line.name}</h3>
-          <p className="text-sm text-gray-600">{line.position || 'Unknown Position'}</p>
+          <p className="text-sm text-gray-600">
+            {line.side} - {line.line_id} 
+            {line.position_index !== null ? ` (위치: ${line.position_index})` : ''}
+          </p>
         </div>
         <span className={`px-3 py-1 rounded-full text-white text-sm ${getStatusColor(line.status)}`}>
           {line.status}
