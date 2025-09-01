@@ -103,12 +103,21 @@ const CriticalAlertModal: React.FC<CriticalAlertModalProps> = ({
         </div>
 
         {/* 조치 안내 */}
-        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-6">
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mb-4">
           <p className="text-sm text-gray-700">
             <span className="font-semibold text-yellow-700">⚠️ 즉시 조치 필요:</span><br/>
             • 계류줄 상태를 즉시 점검하세요<br/>
             • 필요시 추가 계류줄을 설치하세요<br/>
             • 기상 상황을 확인하세요
+          </p>
+        </div>
+
+        {/* 키보드 조작 안내 */}
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 mb-6">
+          <p className="text-xs text-gray-600 text-center">
+            ⌨️ 키보드 단축키: <span className="font-mono bg-gray-200 px-1 rounded text-xs">ESC</span> 닫기 | 
+            <span className="font-mono bg-gray-200 px-1 rounded text-xs ml-1">F9</span> 알림 트리거 | 
+            <span className="font-mono bg-gray-200 px-1 rounded text-xs ml-1">Space</span> 알림 트리거
           </p>
         </div>
 

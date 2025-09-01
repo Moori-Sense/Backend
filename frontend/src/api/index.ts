@@ -58,14 +58,3 @@ export const simulationApi = {
   },
 };
 
-export const testApi = {
-  triggerCriticalAlert: async (): Promise<any> => {
-    const response = await api.post('/test/trigger-critical');
-    return response.data;
-  },
-  
-  resetToNormal: async (): Promise<any> => {
-    const response = await api.post('/test/reset-normal');
-    return response.data;
-  },
-};

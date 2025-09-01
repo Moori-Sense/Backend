@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import type { DashboardData } from './types';
-import { dashboardApi, simulationApi, testApi } from './api';
+import { dashboardApi, simulationApi } from './api';
 import MooringLineCard from './components/MooringLineCard';
 import WeatherDisplay from './components/WeatherDisplay';
 import TensionChart from './components/TensionChart';
@@ -34,26 +34,7 @@ function App() {
       setDashboardData(data);
       setError(null);
       
-      // 위험 상태 계류줄 감지 로직
-      if (data && data.mooring_lines) {
-        const currentCriticalLines = data.mooring_lines.filter(
-          line => line.status === 'CRITICAL'
-        );
-        
-        // 새로운 위험 상태가 발생했는지 확인
-        const prevCriticalCount = criticalLines.length;
-        const newCriticalCount = currentCriticalLines.length;
-        
-        setCriticalLines(currentCriticalLines);
-        
-        // 새로운 위험 상황이 발생했을 때만 모달 표시
-        if (newCriticalCount > 0 && newCriticalCount !== prevCriticalCount) {
-          setShowCriticalAlert(true);
-        } else if (newCriticalCount === 0) {
-          // 모든 위험 상태가 해결되면 모달 닫기
-          setShowCriticalAlert(false);
-        }
-      }
+      // 자동 위험 감지 제거됨 - 키보드 입력으로만 알림 트리거
     } catch (err) {
       console.error('Failed to load dashboard data:', err);
       setError('Failed to load dashboard data');
@@ -118,33 +99,31 @@ function App() {
     setShowCriticalAlert(false);
   };
 
-  // 테스트용 위험 알림 트리거
-  const triggerTestAlert = async () => {
-    try {
-      await testApi.triggerCriticalAlert();
-      // 데이터 새로고침하여 위험 상태 반영
-      setTimeout(() => {
-        loadDashboardData();
-      }, 500);
-    } catch (err) {
-      console.error('Failed to trigger test alert:', err);
+  // 키보드 입력으로 알림창 수동 트리거
+  const triggerManualAlert = () => {
+    // 수동으로 위험 상태 계류줄 시뮬레이션
+    if (dashboardData?.mooring_lines) {
+      // L2, L6 라인을 위험 상태로 시뮬레이션
+      const simulatedCriticalLines = dashboardData.mooring_lines
+        .filter(line => ['L2', 'L6'].includes(line.line_id))
+        .map(line => ({
+          ...line,
+          status: 'CRITICAL' as const,
+          current_tension: line.max_tension ? line.max_tension * 0.95 : line.reference_tension * 1.9, // 최대 장력의 95%
+          tension_percentage: line.max_tension ? (line.max_tension * 0.95 / line.reference_tension * 100) : 190
+        }));
+      
+      if (simulatedCriticalLines.length > 0) {
+        setCriticalLines(simulatedCriticalLines);
+        setShowCriticalAlert(true);
+        
+        // 알림 트리거 확인 메시지 (개발자 도구에서 확인용)
+        console.log('🚨 Critical Alert Triggered by Keyboard Input:', simulatedCriticalLines.map(line => line.name));
+      }
     }
   };
 
-  // 테스트용 정상 상태 복구
-  const resetToNormal = async () => {
-    try {
-      await testApi.resetToNormal();
-      // 데이터 새로고침하여 정상 상태 반영
-      setTimeout(() => {
-        loadDashboardData();
-      }, 500);
-      // 모달도 닫기
-      setShowCriticalAlert(false);
-    } catch (err) {
-      console.error('Failed to reset to normal:', err);
-    }
-  };
+
 
   // 시뮬레이션 상태 주기적 확인
   useEffect(() => {
@@ -152,6 +131,49 @@ function App() {
     const interval = setInterval(checkSimulationStatus, 5000); // 5초마다 확인
     return () => clearInterval(interval);
   }, []);
+
+  // 키보드 이벤트 리스너 설정
+  useEffect(() => {
+    const handleKeyPress = (event: KeyboardEvent) => {
+      // 입력 필드에서는 키보드 단축키 비활성화
+      const target = event.target as HTMLElement;
+      if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA') {
+        return;
+      }
+
+      // F9 키: 알림창 트리거 (주요 단축키)
+      if (event.key === 'F9') {
+        event.preventDefault();
+        triggerManualAlert();
+        console.log('🚨 F9 키로 위험 알림 트리거됨');
+      }
+      // 스페이스바: 알림창 트리거 (body 포커스시에만)
+      else if (event.code === 'Space' && document.activeElement === document.body) {
+        event.preventDefault();
+        triggerManualAlert();
+        console.log('🚨 스페이스바로 위험 알림 트리거됨');
+      }
+      // Ctrl + Shift + A: 알림창 트리거 (고급 단축키)
+      else if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'a') {
+        event.preventDefault();
+        triggerManualAlert();
+        console.log('🚨 Ctrl+Shift+A로 위험 알림 트리거됨');
+      }
+      // Escape 키: 알림창 닫기
+      else if (event.key === 'Escape' && showCriticalAlert) {
+        event.preventDefault();
+        handleCloseCriticalAlert();
+        console.log('✅ ESC키로 알림창 닫힘');
+      }
+    };
+
+    // 전역 키보드 이벤트 리스너 등록
+    document.addEventListener('keydown', handleKeyPress);
+    
+    return () => {
+      document.removeEventListener('keydown', handleKeyPress);
+    };
+  }, [dashboardData, showCriticalAlert, triggerManualAlert, handleCloseCriticalAlert]);
 
   if (loading && !dashboardData) {
     return (
@@ -234,20 +256,18 @@ function App() {
                     </span>
                   )}
                   
-                  {/* 알림 테스트 버튼들 */}
+                  {/* 키보드 알림 제어 */}
                   <div className="flex gap-2 ml-4 border-l border-blue-400 pl-4">
                     <button
-                      onClick={triggerTestAlert}
+                      onClick={triggerManualAlert}
                       className="px-3 py-1 bg-red-500 text-white text-sm rounded hover:bg-red-600 transition-colors"
                     >
-                      🚨 위험알림 테스트
+                      🚨 알림 트리거
                     </button>
-                    <button
-                      onClick={resetToNormal}
-                      className="px-3 py-1 bg-green-500 text-white text-sm rounded hover:bg-green-600 transition-colors"
-                    >
-                      ✅ 정상복구
-                    </button>
+                    <div className="text-xs text-blue-100 self-center">
+                      키보드: <span className="font-mono bg-blue-500 px-1 rounded">F9</span> 또는{' '}
+                      <span className="font-mono bg-blue-500 px-1 rounded">Space</span>
+                    </div>
                   </div>
                 </div>
               )}
@@ -339,6 +359,28 @@ function App() {
                   ))}
                 </div>
               )}
+            </div>
+
+            {/* 키보드 조작 안내 */}
+            <div className="mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
+              <h3 className="text-lg font-semibold text-blue-800 mb-2">⌨️ 키보드 조작</h3>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
+                <div className="flex items-center gap-2">
+                  <kbd className="px-2 py-1 bg-blue-600 text-white rounded text-xs font-mono">F9</kbd>
+                  <span className="text-gray-700">위험 알림 트리거</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <kbd className="px-2 py-1 bg-blue-600 text-white rounded text-xs font-mono">Space</kbd>
+                  <span className="text-gray-700">위험 알림 트리거</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <kbd className="px-2 py-1 bg-blue-600 text-white rounded text-xs font-mono">ESC</kbd>
+                  <span className="text-gray-700">알림창 닫기</span>
+                </div>
+              </div>
+              <p className="text-xs text-blue-600 mt-2">
+                💡 외부 입력 장치나 키보드를 통해 위험 상황 알림을 테스트할 수 있습니다
+              </p>
             </div>
 
             {/* System Status */}

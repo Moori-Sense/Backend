@@ -7,6 +7,7 @@ export interface MooringLine {
   line_type?: 'BREAST' | 'SPRING';
   current_tension: number;
   reference_tension: number;
+  max_tension?: number;  // 최대 허용 장력
   tension_percentage: number;
   remaining_lifespan_percentage: number;
   status: 'NORMAL' | 'WARNING' | 'CRITICAL';
