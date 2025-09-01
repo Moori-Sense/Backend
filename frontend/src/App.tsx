@@ -357,27 +357,7 @@ function App() {
               )}
             </div>
 
-            {/* 키보드 조작 안내 */}
-            <div className="mt-6 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-lg p-4">
-              <h3 className="text-lg font-semibold text-blue-800 mb-2">⌨️ 키보드 조작</h3>
-              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-sm">
-                <div className="flex items-center gap-2">
-                  <kbd className="px-2 py-1 bg-blue-600 text-white rounded text-xs font-mono">F9</kbd>
-                  <span className="text-gray-700">위험 알림 트리거</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <kbd className="px-2 py-1 bg-blue-600 text-white rounded text-xs font-mono">Space</kbd>
-                  <span className="text-gray-700">위험 알림 트리거</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <kbd className="px-2 py-1 bg-blue-600 text-white rounded text-xs font-mono">ESC</kbd>
-                  <span className="text-gray-700">알림창 닫기</span>
-                </div>
-              </div>
-              <p className="text-xs text-blue-600 mt-2">
-                💡 외부 입력 장치나 키보드를 통해 위험 상황 알림을 테스트할 수 있습니다
-              </p>
-            </div>
+
 
             {/* System Status */}
             <div className="mt-6 bg-white rounded-lg shadow-md p-6">
