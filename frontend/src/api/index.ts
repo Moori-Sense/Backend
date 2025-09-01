@@ -13,8 +13,16 @@ const api = axios.create({
 
 export const dashboardApi = {
   getDashboard: async (): Promise<DashboardData> => {
-    const response = await api.get('/dashboard');
-    return response.data;
+    // Get mooring lines separately and combine with dashboard data
+    const [dashboardResponse, mooringLinesResponse] = await Promise.all([
+      api.get('/dashboard'),
+      api.get('/mooring-lines')
+    ]);
+    
+    return {
+      ...dashboardResponse.data,
+      mooring_lines: mooringLinesResponse.data
+    };
   },
 };
 

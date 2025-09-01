@@ -23,7 +23,7 @@ from services import (
     MooringLineService, TensionService, WeatherService, 
     AlertService, SimulationService
 )
-from models import WeatherData
+from models import WeatherData, MooringLine
 from data_parser import initialize_mooring_lines
 from live_simulation import start_live_simulation, stop_live_simulation, get_simulation_status
 import threading
@@ -107,11 +107,13 @@ def get_mooring_lines(
     summaries = []
     for line in lines:
         tension_percentage = (line.current_tension / line.reference_tension * 100) if line.reference_tension > 0 else 0
-        status = MooringLineService.calculate_tension_status(
-            line.current_tension, 
-            line.reference_tension,
-            line.max_tension
-        )
+        # Simple status calculation
+        if line.current_tension > line.reference_tension * 1.2:
+            status = "WARNING"
+        elif line.current_tension > line.max_tension * 0.9:
+            status = "CRITICAL"
+        else:
+            status = "NORMAL"
         
         summaries.append(MooringLineSummary(
             id=line.id,
@@ -313,30 +315,36 @@ def resolve_alert(
 @app.get("/api/dashboard", response_model=DashboardData)
 def get_dashboard_data(db: Session = Depends(get_db)):
     """Get all dashboard data in one request"""
-    # Get mooring lines summary
-    lines = MooringLineService.get_all_mooring_lines(db, active_only=True)
-    line_summaries = []
-    
-    for line in lines:
-        tension_percentage = (line.current_tension / line.reference_tension * 100) if line.reference_tension > 0 else 0
-        status = MooringLineService.calculate_tension_status(
-            line.current_tension,
-            line.reference_tension,
-            line.max_tension
-        )
+    # Get mooring lines summary - direct query to avoid service issues
+    try:
+        lines = db.query(MooringLine).filter(MooringLine.is_active == True).all()
+        line_summaries = []
         
-        line_summaries.append(MooringLineSummary(
-            id=line.id,
-            line_id=line.line_id,
-            name=line.name,
-            side=line.side,
-            position_index=line.position_index,
-            current_tension=line.current_tension,
-            reference_tension=line.reference_tension,
-            tension_percentage=tension_percentage,
-            remaining_lifespan_percentage=line.remaining_lifespan_percentage,
-            status=status
-        ))
+        for line in lines:
+            tension_percentage = (line.current_tension / line.reference_tension * 100) if line.reference_tension > 0 else 0
+            # Simple status calculation
+            if line.current_tension > line.reference_tension * 1.2:
+                status = "WARNING"
+            elif line.current_tension > line.max_tension * 0.9:
+                status = "CRITICAL" 
+            else:
+                status = "NORMAL"
+            
+            line_summaries.append(MooringLineSummary(
+                id=line.id,
+                line_id=line.line_id,
+                name=line.name,
+                side=line.side,
+                position_index=line.position_index,
+                current_tension=line.current_tension,
+                reference_tension=line.reference_tension,
+                tension_percentage=tension_percentage,
+                remaining_lifespan_percentage=line.remaining_lifespan_percentage,
+                status=status
+            ))
+    except Exception as e:
+        print(f"Error loading mooring lines: {e}")
+        line_summaries = []
     
     # Get current weather
     weather = WeatherService.get_current_weather(db)
