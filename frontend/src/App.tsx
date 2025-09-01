@@ -264,10 +264,6 @@ function App() {
                     >
                       🚨 알림 트리거
                     </button>
-                    <div className="text-xs text-blue-100 self-center">
-                      키보드: <span className="font-mono bg-blue-500 px-1 rounded">F9</span> 또는{' '}
-                      <span className="font-mono bg-blue-500 px-1 rounded">Space</span>
-                    </div>
                   </div>
                 </div>
               )}
